@@ -1,3 +1,4 @@
+use dirs::data_dir;
 use rustfst::prelude::ExpandedFst;
 use sajak::compile::compile_expr;
 use sajak::expr::parse_expr;
@@ -6,10 +7,12 @@ const TEST_EXPR: &str = "<het><ral><seg><tan><rut><bla><oody><afl><ndi><cin><awe
 
 fn main() {
     let load_time = Instant::now();
-    let wt = sajak::corpus::trie::CorpusTrie::from_file(std::path::PathBuf::from(
-        "/home/bazinga/files/wikidumps/sajak_data/trie.sjt",
-    ))
-    .unwrap();
+
+    let mut default_trie_path = data_dir().unwrap();
+    default_trie_path.push("sajak");
+    default_trie_path.push("trie.sjt");
+
+    let wt = sajak::corpus::trie::CorpusTrie::from_file(default_trie_path).unwrap();
     println!("Loaded trie in {:.2?}", load_time.elapsed());
 
     let parse_time = Instant::now();
