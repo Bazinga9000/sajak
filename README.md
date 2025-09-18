@@ -107,9 +107,7 @@ Use either of the two below methods to produce the `trie.sjt` file and then plac
 
 If you've opened Sajak before doing this, you will need to wait for Nushell to
 [garbage collect](https://www.nushell.sh/book/plugins.html#plugin-garbage-collector) the plugin, which will happen 10 seconds after use by default,
-for the addition of the file to take effect. This is because the plugin will load the default corpus (if it exists) on startup to prevent the overhead of loading it
-after every query. For this reason, I also recommend configuring Nushell to slow down the garbage collect time of Sajak if, say, you're puzzlehunting and you want
-the corpus to remain in cache for longer than ten seconds between uses.
+for the addition of the file to take effect.
 
 ### Option 1: Acquiring a prebuilt trie (recommended)
 
@@ -144,7 +142,7 @@ This will produce several files and directories in the working directory:
 
 Sajak borrows a lot of its technique from Nutrimatic.
 
-Corpus data is stored in a prefix trie, backed by the `louds` crate.
+Corpus data is stored in a prefix trie.
 
 Expressions are parsed using `nom` and converted into a finite-state transducer using `rustfst`. The FST is optimized after every intermediate compilation step, resulting in generally fast compilation for most "normal" regular expressions. However, the intersection operator (and anagram, which is implemented in terms of it) has the potential to require exponentially many states and thus cause compilation time to blow up with extremely complicated intersections. The `W`, `P`, and `S` atoms have precompiled FSTs baked into the binary that are pulled in wherever they're needed.
 
