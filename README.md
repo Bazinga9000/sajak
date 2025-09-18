@@ -4,7 +4,7 @@ Sajak is a tool that can match regular expression like queries on a corpus gener
 
 It's of the same cloth as [Nutrimatic](https://nutrimatic.org) in that it is able to provide results that do not actually appear in the corpus, but are instead concatenations of multiple phrases that *do* appear in Wikipedia. The combined use of Wikipedia as a source, multi-word phrases, and concatenation means Sajak will be able to provide results like notable names, common idioms, and things never before written in the English langauge (like `my golden octopus powered reinforced steel chair`):
 ```
-> sajak [[my golden octopus powered reinforced steel chair]]                                                                                                                                 11/08/2024 05:
+> sajak [[my golden octopus powered reinforced steel chair]]
 ╭───┬──────────────────────────────────────────────────┬────────┬────────┬─────────┬───────┬──────────╮
 │ # │                      result                      │ score  │ length │ letters │ words │ scrabble │
 ├───┼──────────────────────────────────────────────────┼────────┼────────┼─────────┼───────┼──────────┤
@@ -12,7 +12,7 @@ It's of the same cloth as [Nutrimatic](https://nutrimatic.org) in that it is abl
 ╰───┴──────────────────────────────────────────────────┴────────┴────────┴─────────┴───────┴──────────╯
 ```
 
-The output list is also ordered by corpus frequency, so the top of the list will be populated with more "normal" entries, with the results getting progressively more obscure as results continue. Artificially constructed phrases (like the hovercraft example) will be penalized in score compared to phrases naturally appearing in the corpus.
+The output list is also ordered by corpus frequency, so the top of the list will be populated with more "normal" entries, with the results getting progressively more obscure as results continue. Artificially constructed phrases (like the above example) will be penalized in score compared to phrases naturally appearing in the corpus.
 
 Sajak is primarily intended to be used as a **Nushell plugin** (though a standalone executable is also provided), to take advantage of Nushell's built-in table functuality and provide for some additional query power. For example:
 
