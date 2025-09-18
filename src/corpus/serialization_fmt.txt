@@ -1,0 +1,28 @@
+A .sjt file is of the following format (All numbers are little endian):
+
+Four raw u64s:
+(1) The number of entries in the corpus
+(2) The number of words in the corpus (that is, entries without a space)
+(3) The total frequency of all words in the corpus
+(4) The offset into the blob of the root node
+Followed by the *blob*, which is a sequence of all the nodes in the corpus.
+
+A node always begins with a byte of the form LLLLLLTC
+LLLLLL   - The label of the node (index into "_1234567890abcdefghijklmnopqrstuvwxyz ", _ is null byte \0)
+      T  - Whether or not the node is TERMINAL (that is, the path leading to it is in the corpus)
+       C - Does the node have at least one child?
+
+Followed by the frequency, as an efficient integer.
+If C is not set, this is the end of this node. If C is set, a u8 will follow which will give the number of children, followed by that many efficient integers,
+representing the number of bytes before this node that child begins.
+
+
+Efficient Integer Representation:
+n < 249  | NNNNNNNN
+n < 2^16 | 11111001 NNNNNNNN NNNNNNNN
+n < 2^24 | 11111010 NNNNNNNN NNNNNNNN NNNNNNNN
+n < 2^32 | 11111011 NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN
+n < 2^40 | 11111100 NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN
+n < 2^48 | 11111101 NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN
+n < 2^56 | 11111110 NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN
+n < 2^64 | 11111111 NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN NNNNNNNN
