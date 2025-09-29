@@ -92,8 +92,9 @@ Parameters:
 
 ## Installation Guide
 ### Nushell Plugin (recommended)
+Build the `nu_plugin_sajak` binary using Cargo and then run the Nu command
 ```
-[CARGO COMMAND HERE] && plugin add nu_plugin_sajak
+plugin add nu_plugin_sajak
 ```
 
 ## Getting required files
