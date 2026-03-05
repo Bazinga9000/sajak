@@ -35,6 +35,8 @@ impl CorpusTrie {
             let mut nodes_searched = 0;
             while let Some(qi) = q.pop() {
                 if nodes_searched >= node_search_limit {
+                    dbg!(nodes_searched);
+                    dbg!(q.len());
                     break;
                 }
 

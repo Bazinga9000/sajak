@@ -7,8 +7,7 @@ pub struct CorpusTrie {
     pub num_entries: u64,
     pub num_words: u64,
     pub total_word_frequency: u64,
-    root_offset: usize,
-    root_frequency: f64,
+    root: CorpusNode,
     blob: Vec<u8>,
 }
 
@@ -21,19 +20,14 @@ impl CorpusTrie {
     // The corpus frequency of the path leading to this node
     // Equal to the node's stored frequency minus those of all its children
     fn in_corpus_frequency(&self, node: &CorpusNode) -> u64 {
-        node.frequency
-            - self
-                .children_of(node)
-                .iter()
-                .map(|s| s.frequency)
-                .sum::<u64>()
+        node.own_frequency
     }
 
     // The log of the relative frequency of this node in the **trie**
     // This trie is such that adding a child with frequency n adds n to the frequencies of its parents,
     // and thus the trie has the heap property. This is used to determine in what order to search the trie.
     pub fn search_score(&self, node: &CorpusNode) -> f64 {
-        (node.frequency as f64 / self.root_frequency).log10()
+        (node.frequency as f64 / self.root.frequency as f64).log10()
     }
 
     // The log of the relative corpus frequency of the string terminating at this node
@@ -43,7 +37,7 @@ impl CorpusTrie {
     }
 
     pub fn root(&self) -> CorpusNode {
-        self.node_at(self.root_offset)
+        self.root.clone()
     }
 
     pub fn children_of(&self, node: &CorpusNode) -> Vec<CorpusNode> {
@@ -59,7 +53,7 @@ impl CorpusTrie {
         let (rest, num_words) = num.parse(rest)?;
         let (rest, total_word_frequency) = num.parse(rest)?;
         let (blob_slice, root_offset) = nom::combinator::map(num, |x| x as usize).parse(rest)?;
-        let root_frequency = parse_node_at(root_offset, &blob_slice)?.1.frequency as f64;
+        let root = parse_node_at(root_offset, &blob_slice)?.1;
 
         Ok((
             &[],
@@ -67,8 +61,7 @@ impl CorpusTrie {
                 num_entries,
                 num_words,
                 total_word_frequency,
-                root_offset,
-                root_frequency,
+                root,
                 blob: blob_slice.to_vec(),
             },
         ))
@@ -92,9 +85,11 @@ impl CorpusTrie {
     }
 }
 
+#[derive(Clone)]
 pub struct CorpusNode {
     pub label: char,
     pub frequency: u64,
+    pub own_frequency: u64,
     pub is_terminal: bool,
     pub child_offsets: Vec<usize>,
 }

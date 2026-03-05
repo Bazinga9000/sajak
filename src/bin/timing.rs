@@ -2,6 +2,7 @@ use dirs::data_dir;
 use rustfst::prelude::ExpandedFst;
 use sajak::compile::compile_expr;
 use sajak::expr::parse_expr;
+use sajak::corpus::parsing::total_calls;
 use std::time::Instant;
 const TEST_EXPR: &str = "<het><ral><seg><tan><rut><bla><oody><afl><ndi><cin><awe><ter>";
 
@@ -36,4 +37,5 @@ fn main() {
         .join("\n");
     println!("{}", search_results);
     println!("Search took {:.2?}", search_time.elapsed());
+    unsafe { println!("Total calls of parse_efficient_64: {}", total_calls); }
 }

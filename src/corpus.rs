@@ -1,5 +1,5 @@
 pub mod build;
-mod parsing;
+pub mod parsing;
 pub mod search;
 mod serialization;
 mod simple_trie;
