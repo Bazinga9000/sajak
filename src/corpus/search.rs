@@ -94,11 +94,12 @@ impl QueueItem {
     fn step(&self, trie: &CorpusTrie, allow_loopbacks: bool) -> Vec<QueueItem> {
         let mut new_items = vec![];
 
-        for child in trie.children_of(&self.trie_node) {
-            if let Some((next_state, _)) = step_fst(self.fst.as_ref(), self.fst_state, child.label)
+        for (label, child_offset) in trie.label_offsets(&self.trie_node) {
+            if let Some((next_state, _)) = step_fst(self.fst.as_ref(), self.fst_state, label)
             {
                 let mut new_result = self.result.clone();
-                new_result.push(child.label);
+                new_result.push(label);
+                let child = trie.node_at(child_offset);
                 new_items.push(QueueItem {
                     prior_corpus_score: self.prior_corpus_score,
                     current_search_score: trie.search_score(&child),

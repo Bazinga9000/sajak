@@ -1,4 +1,4 @@
-use super::parsing::parse_node_at;
+use super::parsing::{parse_node_at, read_label_byte};
 use super::simple_trie::SimpleTrie;
 use nom::{IResult, Parser};
 use std::path::PathBuf;
@@ -13,7 +13,7 @@ pub struct CorpusTrie {
 
 impl CorpusTrie {
     // Returns the node at the given offset
-    fn node_at(&self, offset: usize) -> CorpusNode {
+    pub fn node_at(&self, offset: usize) -> CorpusNode {
         parse_node_at(offset, &self.blob).unwrap().1
     }
 
@@ -44,6 +44,13 @@ impl CorpusTrie {
         (&node.child_offsets)
             .into_iter()
             .map(|n| self.node_at(*n))
+            .collect::<Vec<_>>()
+    }
+
+    pub fn label_offsets(&self, node: &CorpusNode) -> Vec<(char, usize)> {
+        (&node.child_offsets)
+            .into_iter()
+            .map(|n| (read_label_byte(self.blob[*n]).label, *n))
             .collect::<Vec<_>>()
     }
 

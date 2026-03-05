@@ -7,21 +7,19 @@ const CHAR_IDS: [char; 38] = [
     'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' ',
 ];
 
-struct LabelByte {
+pub struct LabelByte {
     pub label: char,
     pub terminal: bool,
     pub has_children: bool,
 }
 
-fn read_label_byte(byte: u8) -> LabelByte {
+pub fn read_label_byte(byte: u8) -> LabelByte {
     LabelByte {
         label: CHAR_IDS[(byte >> 2) as usize],
         terminal: byte & 0b_000000_1_0 > 0,
         has_children: byte & 0b000000_0_1 > 0,
     }
 }
-
-pub static mut total_calls: usize = 0;
 
 fn parse_label_byte(input: &[u8]) -> IResult<&[u8], LabelByte> {
     (nom::number::complete::u8)
@@ -44,9 +42,6 @@ fn parse_efficient_u64(input: &[u8]) -> IResult<&[u8], u64> {
 }
 
 pub fn parse_node_at(offset: usize, input: &[u8]) -> IResult<&[u8], CorpusNode> {
-    unsafe {
-        total_calls += 1;
-    }
     let (rest, labelbyte) = parse_label_byte(&input[offset..])?;
     let (rest, frequency) = parse_efficient_u64(rest)?;
     if !labelbyte.has_children {
@@ -68,8 +63,10 @@ pub fn parse_node_at(offset: usize, input: &[u8]) -> IResult<&[u8], CorpusNode> 
         )
         .parse(rest)?;
         let mut sum_child_frequencies: u64 = 0;
-        for child_offset in offsets.iter() {
-            sum_child_frequencies += parse_efficient_u64(&input[*child_offset+1..])?.1;
+        if labelbyte.terminal {
+            for child_offset in offsets.iter() {
+                sum_child_frequencies += parse_efficient_u64(&input[*child_offset + 1..])?.1;
+            }
         }
         Ok((
             rest,
