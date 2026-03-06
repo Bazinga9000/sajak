@@ -1,4 +1,4 @@
-use super::parsing::{parse_node_at, read_label_byte};
+use super::parsing::{parse_node_at};
 use super::simple_trie::SimpleTrie;
 use nom::{IResult, Parser};
 use std::path::PathBuf;
@@ -7,8 +7,10 @@ pub struct CorpusTrie {
     pub num_entries: u64,
     pub num_words: u64,
     pub total_word_frequency: u64,
+    pub root_frequency_log: f64,
+    pub total_word_freq_log: f64,
     root: CorpusNode,
-    blob: Vec<u8>,
+    pub blob: Vec<u8>,
 }
 
 impl CorpusTrie {
@@ -27,13 +29,13 @@ impl CorpusTrie {
     // This trie is such that adding a child with frequency n adds n to the frequencies of its parents,
     // and thus the trie has the heap property. This is used to determine in what order to search the trie.
     pub fn search_score(&self, node: &CorpusNode) -> f64 {
-        (node.frequency as f64 / self.root.frequency as f64).log10()
+        (node.frequency as f64).log10() - self.root_frequency_log
     }
 
     // The log of the relative corpus frequency of the string terminating at this node
     // For nodes not in the corpus, this will return -inf
     pub fn corpus_score(&self, node: &CorpusNode) -> f64 {
-        (self.in_corpus_frequency(node) as f64 / self.total_word_frequency as f64).log10()
+        (self.in_corpus_frequency(node) as f64).log10() - self.total_word_freq_log
     }
 
     pub fn root(&self) -> CorpusNode {
@@ -44,13 +46,6 @@ impl CorpusTrie {
         (&node.child_offsets)
             .into_iter()
             .map(|n| self.node_at(*n))
-            .collect::<Vec<_>>()
-    }
-
-    pub fn label_offsets(&self, node: &CorpusNode) -> Vec<(char, usize)> {
-        (&node.child_offsets)
-            .into_iter()
-            .map(|n| (read_label_byte(self.blob[*n]).label, *n))
             .collect::<Vec<_>>()
     }
 
@@ -68,6 +63,8 @@ impl CorpusTrie {
                 num_entries,
                 num_words,
                 total_word_frequency,
+                root_frequency_log: (root.frequency as f64).log10(),
+                total_word_freq_log: (total_word_frequency as f64).log10(),
                 root,
                 blob: blob_slice.to_vec(),
             },

@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 counter = { version = "0.6.0", features = ["serde"] }
 dirs = "5.0.1"
+min-max-heap = "1.3.0"
 nom = "8.0.0"
 nu-plugin = "0.111.0"
 nu-protocol = "0.111.0"

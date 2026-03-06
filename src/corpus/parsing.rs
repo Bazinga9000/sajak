@@ -13,7 +13,7 @@ pub struct LabelByte {
     pub has_children: bool,
 }
 
-pub fn read_label_byte(byte: u8) -> LabelByte {
+fn read_label_byte(byte: u8) -> LabelByte {
     LabelByte {
         label: CHAR_IDS[(byte >> 2) as usize],
         terminal: byte & 0b_000000_1_0 > 0,
@@ -41,9 +41,14 @@ fn parse_efficient_u64(input: &[u8]) -> IResult<&[u8], u64> {
     Ok((rest, u64::from_le_bytes(integer)))
 }
 
-pub fn parse_node_at(offset: usize, input: &[u8]) -> IResult<&[u8], CorpusNode> {
+pub fn read_label_and_frequency(offset: usize, input: &[u8]) -> IResult<&[u8], (LabelByte, u64)> {
     let (rest, labelbyte) = parse_label_byte(&input[offset..])?;
     let (rest, frequency) = parse_efficient_u64(rest)?;
+    Ok((rest, (labelbyte, frequency)))
+}
+
+pub fn parse_node_at(offset: usize, input: &[u8]) -> IResult<&[u8], CorpusNode> {
+    let (rest, (labelbyte, frequency)) = read_label_and_frequency(offset, input)?;
     if !labelbyte.has_children {
         Ok((
             rest,
