@@ -85,10 +85,10 @@ impl SimpleNode {
         out.push(self.get_label_byte());
         write_efficient_integer(out, self.frequency);
 
-        let own_frequency = self.frequency - self.children.iter().map(|c| c.frequency).sum::<u64>();
-        write_efficient_integer(out, own_frequency);
-
         if !self.children.is_empty() {
+            let own_frequency = self.frequency - self.children.iter().map(|c| c.frequency).sum::<u64>();
+            write_efficient_integer(out, own_frequency);
+            
             // write the number of children
             out.push(self.children.len() as u8);
 
