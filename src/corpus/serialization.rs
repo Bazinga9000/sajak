@@ -97,6 +97,8 @@ impl SimpleNode {
                 write_efficient_integer(out, o);
             }
         }
+        let own_frequency = self.frequency - self.children.iter().map(|c| c.frequency).sum::<u64>();
+        write_efficient_integer(out, own_frequency);
 
         node_offset
     }
