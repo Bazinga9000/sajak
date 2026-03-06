@@ -1,4 +1,4 @@
-use super::parsing::{parse_node_at};
+use super::parsing::{children_offsets, parse_node_at};
 use super::simple_trie::SimpleTrie;
 use nom::{IResult, Parser};
 use std::path::PathBuf;
@@ -9,8 +9,8 @@ pub struct CorpusTrie {
     pub total_word_frequency: u64,
     pub root_frequency_log: f64,
     pub total_word_freq_log: f64,
-    root: CorpusNode,
     pub blob: Vec<u8>,
+    root: CorpusNode,
 }
 
 impl CorpusTrie {
@@ -43,10 +43,14 @@ impl CorpusTrie {
     }
 
     pub fn children_of(&self, node: &CorpusNode) -> Vec<CorpusNode> {
-        (&node.child_offsets)
-            .into_iter()
-            .map(|n| self.node_at(*n))
-            .collect::<Vec<_>>()
+        if node.num_children == 0 {
+            vec![]
+        } else {
+            children_offsets(node, &self.blob).unwrap().1
+                .into_iter()
+                .map(|n| self.node_at(n))
+                .collect::<Vec<_>>()
+        }
     }
 
     fn parse_trie(input: &[u8]) -> IResult<&[u8], CorpusTrie> {
@@ -91,9 +95,11 @@ impl CorpusTrie {
 
 #[derive(Clone)]
 pub struct CorpusNode {
+    pub offset: usize,
     pub label: char,
     pub frequency: u64,
     pub own_frequency: u64,
     pub is_terminal: bool,
-    pub child_offsets: Vec<usize>,
+    pub num_children: u8,
+    pub child_offset_loc: usize,
 }

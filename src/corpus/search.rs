@@ -1,5 +1,5 @@
 use super::trie::{CorpusNode, CorpusTrie};
-use super::parsing::read_label_and_frequency;
+use super::parsing::{children_offsets, read_label_and_frequency};
 use crate::{fst_ops::step_fst};
 use min_max_heap::MinMaxHeap;
 use rustfst::{
@@ -97,31 +97,33 @@ impl QueueItem {
         } else {
             q.peek_min().map_or(f64::NEG_INFINITY, |n| n.total_search_score())
         };
-        for (offset, (labelbyte, frequency)) in (&self.trie_node.child_offsets).iter()
-            .map(|n| (*n, read_label_and_frequency(*n, &trie.blob).unwrap().1)) {
-            let label = labelbyte.label;
-            if let Some((next_state, _)) = step_fst(self.fst.as_ref(), self.fst_state, label)
-            {
-                let search_score = (frequency as f64).log10() - trie.root_frequency_log;
-                if self.prior_corpus_score + search_score < cutoff_score {
-                    break; // all following nodes are worse
-                }
-                let mut new_result = self.result.clone();
-                new_result.push(label);
-                let child = trie.node_at(offset);
-                q.push(QueueItem {
-                    prior_corpus_score: self.prior_corpus_score,
-                    current_search_score: search_score,
-                    result: new_result,
+        if self.trie_node.num_children > 0 {
+            for (offset, (labelbyte, frequency)) in children_offsets(&self.trie_node, &trie.blob).unwrap().1.iter()
+                .map(|n| (*n, read_label_and_frequency(*n, &trie.blob).unwrap().1)) {
+                let label = labelbyte.label;
+                if let Some((next_state, _)) = step_fst(self.fst.as_ref(), self.fst_state, label)
+                {
+                    let search_score = (frequency as f64).log10() - trie.root_frequency_log;
+                    if self.prior_corpus_score + search_score < cutoff_score {
+                        break; // all following nodes are worse
+                    }
+                    let mut new_result = self.result.clone();
+                    new_result.push(label);
+                    let child = trie.node_at(offset);
+                    q.push(QueueItem {
+                        prior_corpus_score: self.prior_corpus_score,
+                        current_search_score: search_score,
+                        result: new_result,
 
-                    fst: self.fst.clone(),
-                    trie_node: child,
-                    fst_state: next_state,
-                });
-                if q.len() > nodes_remaining as usize {
-                    q.pop_min();
-                    if q.len() > 0 {
-                        cutoff_score = q.peek_min().unwrap().total_search_score();
+                        fst: self.fst.clone(),
+                        trie_node: child,
+                        fst_state: next_state,
+                    });
+                    if q.len() > nodes_remaining as usize {
+                        q.pop_min();
+                        if q.len() > 0 {
+                            cutoff_score = q.peek_min().unwrap().total_search_score();
+                        }
                     }
                 }
             }
