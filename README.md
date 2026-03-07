@@ -76,6 +76,40 @@ The full query syntax is as follows:
 
 Note that the by-default ignoring of spaces makes tokens like `-` and `_` redundant outside of double-bracketed expressions, but they are allowed anywhere.
 
+## NixOS Installation
+The provided Nix flake will install and configure the various sajak binaries for you. It will also fetch the latest default corpus from this repository and use it as its default automatically.
+
+You can try out the basic CLI without installing them with the following command:
+```
+nix run github:Bazinga9000/sajak
+```
+
+Alternatively, to include Sajak in an NixOS configuration, add this flake to your inputs:
+```nix
+inputs.sajak = {
+    url = "github:Bazinga9000/sajak";
+    inputs.nixpkgs.follows = "nixpkgs";
+}; 
+```
+And either add the desired packages from inputs:
+```nix
+environment.systemPackages = [
+    inputs.baz9k-pkgs.packages.${pkgs.stdenv.hostPlatform.system}.sajak
+]
+```
+Or enable the provided overlay:
+```nix
+nixpkgs.overlays = [ inputs.baz9k-pkgs.overlays.default ];
+environment.systemPackages = [
+    sajak
+];
+```
+You can also add the nushell plugin directly with:
+```
+
+```
+
+
 ## Installation and Usage Guide
 ### Nushell Plugin
 Build the `nu_plugin_sajak` binary using Cargo and then run the Nu command
