@@ -4,12 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+actix-web = "4.13.0"
 counter = { version = "0.6.0", features = ["serde"] }
+derive_more = "2.1.1"
 dirs = "5.0.1"
+env_logger = "0.11.9"
+log = "0.4.29"
 min-max-heap = "1.3.0"
 nom = "8.0.0"
 nu-plugin = "0.111.0"
 nu-protocol = "0.111.0"
+num_cpus = "1.17.0"
 regex = "1.11.1"
 rustfst = "1.1.2"
 serde = "1.0.214"

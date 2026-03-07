@@ -1,12 +1,13 @@
-use super::trie::{CorpusNode, CorpusTrie};
 use super::parsing::{children_offsets, read_label_and_frequency};
-use crate::{fst_ops::step_fst};
+use super::trie::{CorpusNode, CorpusTrie};
+use crate::fst_ops::step_fst;
+use core::f64;
 use min_max_heap::MinMaxHeap;
 use rustfst::{
     prelude::{CoreFst, TropicalWeight, VectorFst},
     StateId,
 };
-use core::f64;
+use serde::Serialize;
 use std::{
     collections::{BinaryHeap, HashSet},
     sync::Arc,
@@ -54,7 +55,6 @@ impl CorpusTrie {
                 if nodes_remaining == 0 {
                     break;
                 }
-
             }
             dbg!(q.len());
             let mut results = vec![];
@@ -91,18 +91,28 @@ impl QueueItem {
         self.fst.is_final(self.fst_state).unwrap()
     }
 
-    fn step(&self, trie: &CorpusTrie, allow_loopbacks: bool, nodes_remaining: u64, q: &mut MinMaxHeap<QueueItem>) {
+    fn step(
+        &self,
+        trie: &CorpusTrie,
+        allow_loopbacks: bool,
+        nodes_remaining: u64,
+        q: &mut MinMaxHeap<QueueItem>,
+    ) {
         let mut cutoff_score = if (q.len() as u64) < nodes_remaining {
             f64::NEG_INFINITY
         } else {
-            q.peek_min().map_or(f64::NEG_INFINITY, |n| n.total_search_score())
+            q.peek_min()
+                .map_or(f64::NEG_INFINITY, |n| n.total_search_score())
         };
         if self.trie_node.num_children > 0 {
-            for (offset, (labelbyte, frequency)) in children_offsets(&self.trie_node, &trie.blob).unwrap().1.iter()
-                .map(|n| (*n, read_label_and_frequency(*n, &trie.blob).unwrap().1)) {
+            for (offset, (labelbyte, frequency)) in children_offsets(&self.trie_node, &trie.blob)
+                .unwrap()
+                .1
+                .iter()
+                .map(|n| (*n, read_label_and_frequency(*n, &trie.blob).unwrap().1))
+            {
                 let label = labelbyte.label;
-                if let Some((next_state, _)) = step_fst(self.fst.as_ref(), self.fst_state, label)
-                {
+                if let Some((next_state, _)) = step_fst(self.fst.as_ref(), self.fst_state, label) {
                     let search_score = (frequency as f64).log10() - trie.root_frequency_log;
                     if self.prior_corpus_score + search_score < cutoff_score {
                         break; // all following nodes are worse
@@ -186,7 +196,7 @@ impl Ord for QueueItem {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct SearchResult {
     pub result: String,
     pub score: f64,

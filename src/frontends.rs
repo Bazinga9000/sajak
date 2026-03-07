@@ -1,6 +1,6 @@
-use std::path::PathBuf;
-
+use crate::corpus::trie::CorpusTrie;
 use dirs::data_dir;
+use std::path::PathBuf;
 
 // Fetch the default trie path. Uses the env var SAJAK_DEFAULT_TRIE if set, otherwise defaults to
 // Win - %AppData%/sajak/tire.sjt
@@ -17,4 +17,8 @@ pub fn default_trie_path() -> PathBuf {
             default_trie_path
         }
     }
+}
+
+pub fn load_default_tree() -> Option<CorpusTrie> {
+    CorpusTrie::from_file(default_trie_path())
 }

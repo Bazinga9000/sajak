@@ -14,7 +14,11 @@ It's of the same cloth as [Nutrimatic](https://nutrimatic.org) in that it is abl
 
 The output list is also ordered by corpus frequency, so the top of the list will be populated with more "normal" entries, with the results getting progressively more obscure as results continue. Artificially constructed phrases (like the above example) will be penalized in score compared to phrases naturally appearing in the corpus.
 
-Sajak is primarily intended to be used as a **Nushell plugin** (though a standalone executable is also provided), to take advantage of Nushell's built-in table functuality and provide for some additional query power. For example:
+Sajak is provided with the following front-ends:
+- A **Nushell plugin** for local use.
+- An **HTTP Server** for use as an API.
+
+The Nushell plugin allows sajak to take advantage of Nushell's built-in table functuality and provide for some additional query power. For example:
 
 "Take the 1000 most frequent seven letter strings where letters 1,3,4,6 are consonants and leters 2,5,7 are vowels, and give me the 20 with highest scrabble scores"
 ```
@@ -71,31 +75,32 @@ The full query syntax is as follows:
 
 Note that the by-default ignoring of spaces makes tokens like `-` and `_` redundant outside of double-bracketed expressions, but they are allowed anywhere.
 
-## Plugin Usage
-
-The plugin provides the following commands. Their `-h` messages follow:
-```
-Usage:
-  > sajak {flags} <query>
-
-Flags:
-  -h, --help: Display the help message for this command
-  -r, --max_results <int>: The maximum length of the output table (default 50).
-  -n, --max_nodes <float>: The maximum number of nodes to search, in millions (default 2).
-  -l, --no-loopbacks: Do not consider concatenations of results as valid results.
-  -s, --save-fst <path>: Save the compiled FST to the given file.
-  -c, --corpus <path>: Search over the trie saved in the specified file, as opposed to the default.
-
-Parameters:
-  query <string>: The query to search for.
-```
-
-## Installation Guide
-### Nushell Plugin (recommended)
+## Installation and Usage Guide
+### Nushell Plugin
 Build the `nu_plugin_sajak` binary using Cargo and then run the Nu command
 ```
 plugin add nu_plugin_sajak
 ```
+The Nushell plugin exposes `sajak` and `sajak-mkfst`. Run them with `-h` for usage information.
+
+
+### HTTP Server
+Build the `sajak_http` binary using Cargo and run it. This will expose an HTTP server on the port specified in the `PORT` environment variable (1983 by default). The server suppports the following endpoints (mostly matching the options of the Nushell plugin):
+- GET `/health`, returns a simple health and version check.
+- GET `/query`, performs the sajak query using the following JSON parameters: 
+  - `query`, a required string in the above query syntax.
+  - `max_nodes`, a float specifying the number of nodes to search in millions. Defaults to `4`.
+  - `max_results`, a positive `u16` specifying the maximum number of results to display. Defaults to `10`.
+  - `enable_loopbacks`, a boolean describing whether to allow concatenations to be considered valid. Defaults to `true`.
+
+A valid request will return a JSON array of dicts with the following keys:
+- `result`, the result of the query
+- `score`, the frequency score
+- `length`, the total length of the result
+- `length_nospace`, the total length of the result, excluding spaces 
+- `num_words`, the number of words in the result
+- `scrabble`, the Scrabble score of the result
+
 
 ## Getting required files
 
@@ -106,9 +111,11 @@ Use either of the two below methods to produce the `trie.sjt` file and then plac
 - On MacOS, this is `/Users/USERNAME/Library/Application Support/sajak`
 - On Windows, this is `C:\Users\USERNAME\AppData\Roaming`
 
-If you've opened Sajak before doing this, you will need to wait for Nushell to
-[garbage collect](https://www.nushell.sh/book/plugins.html#plugin-garbage-collector) the plugin, which will happen 10 seconds after use by default,
-for the addition of the file to take effect.
+Alternatively, you can specify a different default directory using the `SAJAK_DEFAULT_TRIE` environment variable. All frontends use this for their default corpus if set.
+
+If you've installed the Nushell plugin before doing this, you will need to wait for Nushell to
+[garbage collect](https://www.nushell.sh/book/plugins.html#plugin-garbage-collector) it, which will happen 10 seconds after use by default,
+for the addition of the file to take effect (as Nushell caches plugins).
 
 ### Option 1: Acquiring a prebuilt trie (recommended)
 
@@ -117,7 +124,7 @@ You can find premade versions of these files used by me in the Releases tab.
 These files were generated based on the Wikipedia dump on **October 20, 2024**.
 
 ### Option 2: Generate your own trie
-*(This will require >30GB of RAM and ~50GB of disk space!)*
+*(This will require >30GB of RAM and ~50GB of disk space! It will also require the nushell plugin frontend, as that is the only frontend that implements exposes the corpus-building functionality.)*
 
 If you wish to build your own prefabs instead of using the provided one (if, say, the provided set is too out of date for your liking), perform the following steps:
 

@@ -1,4 +1,4 @@
-use crate::frontends::default_trie_path;
+use crate::frontends::load_default_tree;
 use nu_plugin::{Plugin, PluginCommand};
 
 use crate::{
@@ -13,7 +13,7 @@ pub struct SajakPlugin {
 impl SajakPlugin {
     pub fn new() -> SajakPlugin {
         SajakPlugin {
-            trie: CorpusTrie::from_file(default_trie_path()),
+            trie: load_default_tree(),
         }
     }
 }
