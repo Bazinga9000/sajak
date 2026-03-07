@@ -13,7 +13,7 @@ use super::{
     tablify_results::tablify_results,
 };
 
-const DEFAULT_MAX_NODES: f64 = 2.0;
+const DEFAULT_MAX_NODES: f64 = 4.0;
 const DEFAULT_MAX_RESULTS: i32 = 50;
 
 pub struct SajakCommand;
