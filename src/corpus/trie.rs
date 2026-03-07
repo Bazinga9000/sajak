@@ -1,4 +1,4 @@
-use super::parsing::parse_node_at;
+use super::parsing::{children_offsets, parse_node_at};
 use super::simple_trie::SimpleTrie;
 use nom::{IResult, Parser};
 use std::path::PathBuf;
@@ -7,50 +7,50 @@ pub struct CorpusTrie {
     pub num_entries: u64,
     pub num_words: u64,
     pub total_word_frequency: u64,
-    root_offset: usize,
-    root_frequency: f64,
-    blob: Vec<u8>,
+    pub root_frequency_log: f64,
+    pub total_word_freq_log: f64,
+    pub blob: Vec<u8>,
+    root: CorpusNode,
 }
 
 impl CorpusTrie {
     // Returns the node at the given offset
-    fn node_at(&self, offset: usize) -> CorpusNode {
+    pub fn node_at(&self, offset: usize) -> CorpusNode {
         parse_node_at(offset, &self.blob).unwrap().1
     }
 
     // The corpus frequency of the path leading to this node
     // Equal to the node's stored frequency minus those of all its children
     fn in_corpus_frequency(&self, node: &CorpusNode) -> u64 {
-        node.frequency
-            - self
-                .children_of(node)
-                .iter()
-                .map(|s| s.frequency)
-                .sum::<u64>()
+        node.own_frequency
     }
 
     // The log of the relative frequency of this node in the **trie**
     // This trie is such that adding a child with frequency n adds n to the frequencies of its parents,
     // and thus the trie has the heap property. This is used to determine in what order to search the trie.
     pub fn search_score(&self, node: &CorpusNode) -> f64 {
-        (node.frequency as f64 / self.root_frequency).log10()
+        (node.frequency as f64).log10() - self.root_frequency_log
     }
 
     // The log of the relative corpus frequency of the string terminating at this node
     // For nodes not in the corpus, this will return -inf
     pub fn corpus_score(&self, node: &CorpusNode) -> f64 {
-        (self.in_corpus_frequency(node) as f64 / self.total_word_frequency as f64).log10()
+        (self.in_corpus_frequency(node) as f64).log10() - self.total_word_freq_log
     }
 
     pub fn root(&self) -> CorpusNode {
-        self.node_at(self.root_offset)
+        self.root.clone()
     }
 
     pub fn children_of(&self, node: &CorpusNode) -> Vec<CorpusNode> {
-        (&node.child_offsets)
-            .into_iter()
-            .map(|n| self.node_at(*n))
-            .collect::<Vec<_>>()
+        if node.num_children == 0 {
+            vec![]
+        } else {
+            children_offsets(node, &self.blob).unwrap().1
+                .into_iter()
+                .map(|n| self.node_at(n))
+                .collect::<Vec<_>>()
+        }
     }
 
     fn parse_trie(input: &[u8]) -> IResult<&[u8], CorpusTrie> {
@@ -59,7 +59,7 @@ impl CorpusTrie {
         let (rest, num_words) = num.parse(rest)?;
         let (rest, total_word_frequency) = num.parse(rest)?;
         let (blob_slice, root_offset) = nom::combinator::map(num, |x| x as usize).parse(rest)?;
-        let root_frequency = parse_node_at(root_offset, &blob_slice)?.1.frequency as f64;
+        let root = parse_node_at(root_offset, &blob_slice)?.1;
 
         Ok((
             &[],
@@ -67,8 +67,9 @@ impl CorpusTrie {
                 num_entries,
                 num_words,
                 total_word_frequency,
-                root_offset,
-                root_frequency,
+                root_frequency_log: (root.frequency as f64).log10(),
+                total_word_freq_log: (total_word_frequency as f64).log10(),
+                root,
                 blob: blob_slice.to_vec(),
             },
         ))
@@ -92,9 +93,13 @@ impl CorpusTrie {
     }
 }
 
+#[derive(Clone)]
 pub struct CorpusNode {
+    pub offset: usize,
     pub label: char,
     pub frequency: u64,
+    pub own_frequency: u64,
     pub is_terminal: bool,
-    pub child_offsets: Vec<usize>,
+    pub num_children: u8,
+    pub child_offset_loc: usize,
 }

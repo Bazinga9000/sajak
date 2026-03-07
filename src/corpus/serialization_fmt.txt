@@ -13,7 +13,11 @@ LLLLLL   - The label of the node (index into "_1234567890abcdefghijklmnopqrstuvw
        C - Does the node have at least one child?
 
 Followed by the frequency, as an efficient integer.
-If C is not set, this is the end of this node. If C is set, a u8 will follow which will give the number of children, followed by that many efficient integers,
+If C is not set, this is the end of this node.
+
+If C is set, we have the "own" frequency of the node as an efficient integer,
+It is equal to the frequency of the node minus the sum frequency of all its children.
+A u8 will then follow which will give the number of children, followed by that many efficient integers,
 representing the number of bytes before this node that child begins.
 
 

@@ -37,8 +37,6 @@ impl SimplePluginCommand for SajakTrieCommand {
         let current_dir = std::path::PathBuf::from(engine.get_current_dir()?);
         build_trie(path, current_dir);
 
-        Ok(Value::Nothing {
-            internal_span: call.head,
-        })
+        Ok(Value::nothing(call.head))
     }
 }

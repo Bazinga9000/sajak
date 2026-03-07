@@ -7,7 +7,9 @@ const CHAR_IDS: [char; 38] = [
     'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', ' ',
 ];
 
-struct LabelByte {
+
+
+pub struct LabelByte {
     pub label: char,
     pub terminal: bool,
     pub has_children: bool,
@@ -41,34 +43,56 @@ fn parse_efficient_u64(input: &[u8]) -> IResult<&[u8], u64> {
     Ok((rest, u64::from_le_bytes(integer)))
 }
 
-pub fn parse_node_at(offset: usize, input: &[u8]) -> IResult<&[u8], CorpusNode> {
+fn compute_u64_size(num: u64) -> usize {
+    if num < 249 {
+        1
+    } else {
+        1 + ((64 - num.leading_zeros()) as usize + 7) / 8 // ceiling trick
+    }
+}
+
+pub fn read_label_and_frequency(offset: usize, input: &[u8]) -> IResult<&[u8], (LabelByte, u64)> {
     let (rest, labelbyte) = parse_label_byte(&input[offset..])?;
     let (rest, frequency) = parse_efficient_u64(rest)?;
+    Ok((rest, (labelbyte, frequency)))
+}
+
+pub fn parse_node_at(offset: usize, input: &[u8]) -> IResult<&[u8], CorpusNode> {
+    let (rest, (labelbyte, frequency)) = read_label_and_frequency(offset, input)?;
     if !labelbyte.has_children {
         Ok((
             rest,
             CorpusNode {
+                offset,
                 label: labelbyte.label,
                 frequency,
+                own_frequency: frequency,
                 is_terminal: labelbyte.terminal,
-                child_offsets: vec![],
+                num_children: 0,
+                child_offset_loc: 0,
             },
         ))
     } else {
+        let (rest, own_frequency) = parse_efficient_u64(rest)?;
         let (rest, num_children) = nom::number::complete::u8.parse(rest)?;
-        let (rest, offsets) = nom::multi::count(
-            nom::combinator::map(parse_efficient_u64, |n| offset - (n as usize)),
-            num_children as usize,
-        )
-        .parse(rest)?;
         Ok((
             rest,
             CorpusNode {
+                offset,
                 label: labelbyte.label,
                 frequency,
+                own_frequency,
                 is_terminal: labelbyte.terminal,
-                child_offsets: offsets,
+                num_children,
+                child_offset_loc: offset + 2 + compute_u64_size(frequency) + compute_u64_size(own_frequency),
             },
         ))
     }
+}
+
+pub fn children_offsets<'a>(node: &'a CorpusNode, input: &'a [u8]) -> IResult<&'a [u8], Vec<usize>> {
+    nom::multi::count(
+        nom::combinator::map(parse_efficient_u64, |n| node.offset - (n as usize)),
+        node.num_children as usize,
+    ).parse(&input[node.child_offset_loc..])
 }

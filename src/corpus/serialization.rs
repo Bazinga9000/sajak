@@ -73,7 +73,10 @@ impl SimpleNode {
     }
     fn write(&self, out: &mut Vec<u8>) -> u64 {
         // write all children first, collecting their offsets
-        let child_offsets: Vec<_> = (&self.children).iter().map(|c| c.write(out)).collect();
+        let mut sort_indices = (0..self.children.len()).collect::<Vec<_>>();
+        sort_indices.sort_by(|i, j| self.children[*j].frequency.cmp(&self.children[*i].frequency));
+        // sort by descending frequency
+        let child_offsets: Vec<_> = (sort_indices).iter().map(|c| self.children[*c].write(out)).collect();
 
         // get the current offset
         let node_offset = out.len() as u64;
@@ -83,6 +86,9 @@ impl SimpleNode {
         write_efficient_integer(out, self.frequency);
 
         if !self.children.is_empty() {
+            let own_frequency = self.frequency - self.children.iter().map(|c| c.frequency).sum::<u64>();
+            write_efficient_integer(out, own_frequency);
+            
             // write the number of children
             out.push(self.children.len() as u8);
 

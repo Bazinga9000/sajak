@@ -1,9 +1,12 @@
 use super::trie::{CorpusNode, CorpusTrie};
-use crate::fst_ops::step_fst;
+use super::parsing::{children_offsets, read_label_and_frequency};
+use crate::{fst_ops::step_fst};
+use min_max_heap::MinMaxHeap;
 use rustfst::{
     prelude::{CoreFst, TropicalWeight, VectorFst},
     StateId,
 };
+use core::f64;
 use std::{
     collections::{BinaryHeap, HashSet},
     sync::Arc,
@@ -20,7 +23,7 @@ impl CorpusTrie {
         if let Some(start_state) = fst.start() {
             let root = self.root();
 
-            let mut q = BinaryHeap::new();
+            let mut q = MinMaxHeap::with_capacity(node_search_limit as usize + 10);
             q.push(QueueItem {
                 result: "".to_owned(),
                 prior_corpus_score: 0.0,
@@ -32,18 +35,10 @@ impl CorpusTrie {
 
             let mut res_q = BinaryHeap::new();
             let mut seen = HashSet::new();
-            let mut nodes_searched = 0;
-            while let Some(qi) = q.pop() {
-                if nodes_searched >= node_search_limit {
-                    break;
-                }
-
-                nodes_searched += 1;
+            let mut nodes_remaining = node_search_limit;
+            while let Some(qi) = q.pop_max() {
                 // println!("{}: tss={} pcs={} css={} ccs={}", qi.result, qi.total_search_score(), qi.prior_corpus_score, qi.current_search_score, self.corpus_score(&qi.trie_node));
-
-                for child in qi.step(self, allow_loopbacks) {
-                    q.push(child);
-                }
+                qi.step(self, allow_loopbacks, nodes_remaining, &mut q);
 
                 if qi.is_accepted() // FST is on a final state
                 && qi.is_in_corpus() // state is terminal
@@ -54,7 +49,14 @@ impl CorpusTrie {
                     seen.insert(qi.result.clone());
                     res_q.push(SearchResult::from_queueitem(qi, self))
                 }
+
+                nodes_remaining -= 1;
+                if nodes_remaining == 0 {
+                    break;
+                }
+
             }
+            dbg!(q.len());
             let mut results = vec![];
             while let Some(res) = res_q.pop() {
                 if results.len() >= max_visible_results {
@@ -89,44 +91,67 @@ impl QueueItem {
         self.fst.is_final(self.fst_state).unwrap()
     }
 
-    fn step(&self, trie: &CorpusTrie, allow_loopbacks: bool) -> Vec<QueueItem> {
-        let mut new_items = vec![];
+    fn step(&self, trie: &CorpusTrie, allow_loopbacks: bool, nodes_remaining: u64, q: &mut MinMaxHeap<QueueItem>) {
+        let mut cutoff_score = if (q.len() as u64) < nodes_remaining {
+            f64::NEG_INFINITY
+        } else {
+            q.peek_min().map_or(f64::NEG_INFINITY, |n| n.total_search_score())
+        };
+        if self.trie_node.num_children > 0 {
+            for (offset, (labelbyte, frequency)) in children_offsets(&self.trie_node, &trie.blob).unwrap().1.iter()
+                .map(|n| (*n, read_label_and_frequency(*n, &trie.blob).unwrap().1)) {
+                let label = labelbyte.label;
+                if let Some((next_state, _)) = step_fst(self.fst.as_ref(), self.fst_state, label)
+                {
+                    let search_score = (frequency as f64).log10() - trie.root_frequency_log;
+                    if self.prior_corpus_score + search_score < cutoff_score {
+                        break; // all following nodes are worse
+                    }
+                    let mut new_result = self.result.clone();
+                    new_result.push(label);
+                    let child = trie.node_at(offset);
+                    q.push(QueueItem {
+                        prior_corpus_score: self.prior_corpus_score,
+                        current_search_score: search_score,
+                        result: new_result,
 
-        for child in trie.children_of(&self.trie_node) {
-            if let Some((next_state, _)) = step_fst(self.fst.as_ref(), self.fst_state, child.label)
-            {
-                let mut new_result = self.result.clone();
-                new_result.push(child.label);
-                new_items.push(QueueItem {
-                    prior_corpus_score: self.prior_corpus_score,
-                    current_search_score: trie.search_score(&child),
-                    result: new_result,
-
-                    fst: self.fst.clone(),
-                    trie_node: child,
-                    fst_state: next_state,
-                });
+                        fst: self.fst.clone(),
+                        trie_node: child,
+                        fst_state: next_state,
+                    });
+                    if q.len() > nodes_remaining as usize {
+                        q.pop_min();
+                        if q.len() > 0 {
+                            cutoff_score = q.peek_min().unwrap().total_search_score();
+                        }
+                    }
+                }
             }
         }
 
         if allow_loopbacks && self.is_in_corpus() {
             if let Some((next_state, _)) = step_fst(&self.fst, self.fst_state, ' ') {
-                let mut new_result = self.result.clone();
-                new_result.push(' ');
-                let root = trie.root();
-                new_items.push(QueueItem {
-                    prior_corpus_score: self.prior_corpus_score
-                        + trie.corpus_score(&self.trie_node),
-                    current_search_score: 0.0, // root, by definition, has search score 0 (the maximum)
-                    result: new_result,
+                let search_score = self.prior_corpus_score + trie.corpus_score(&self.trie_node);
+                if search_score >= cutoff_score {
+                    let mut new_result = self.result.clone();
+                    new_result.push(' ');
+                    let root = trie.root();
+                    q.push(QueueItem {
+                        prior_corpus_score: self.prior_corpus_score
+                            + trie.corpus_score(&self.trie_node),
+                        current_search_score: 0.0, // root, by definition, has search score 0 (the maximum)
+                        result: new_result,
 
-                    fst: self.fst.clone(),
-                    fst_state: next_state,
-                    trie_node: root,
-                })
+                        fst: self.fst.clone(),
+                        fst_state: next_state,
+                        trie_node: root,
+                    })
+                }
+                if q.len() > nodes_remaining as usize {
+                    q.pop_min();
+                }
             }
         }
-        new_items
     }
 
     pub fn total_search_score(&self) -> f64 {
