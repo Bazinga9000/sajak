@@ -24,7 +24,7 @@ fn read_label_byte(byte: u8) -> LabelByte {
 }
 
 fn parse_label_byte(input: &[u8]) -> IResult<&[u8], LabelByte> {
-    (nom::number::complete::u8)
+    nom::number::complete::u8
         .map(read_label_byte)
         .parse(input)
 }
@@ -46,6 +46,8 @@ fn parse_efficient_u64(input: &[u8]) -> IResult<&[u8], u64> {
 fn compute_u64_size(num: u64) -> usize {
     if num < 249 {
         1
+    } else if num < 256 {
+        3  
     } else {
         1 + ((64 - num.leading_zeros()) as usize + 7) / 8 // ceiling trick
     }
@@ -90,7 +92,7 @@ pub fn parse_node_at(offset: usize, input: &[u8]) -> IResult<&[u8], CorpusNode> 
     }
 }
 
-pub fn children_offsets<'a>(node: &'a CorpusNode, input: &'a [u8]) -> IResult<&'a [u8], Vec<usize>> {
+pub fn children_offsets<'a>(node: &CorpusNode, input: &'a [u8]) -> IResult<&'a [u8], Vec<usize>> {
     nom::multi::count(
         nom::combinator::map(parse_efficient_u64, |n| node.offset - (n as usize)),
         node.num_children as usize,
