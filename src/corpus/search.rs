@@ -56,7 +56,7 @@ impl CorpusTrie {
                     break;
                 }
             }
-            dbg!(q.len());
+
             let mut results = vec![];
             while let Some(res) = res_q.pop() {
                 if results.len() >= max_visible_results {
