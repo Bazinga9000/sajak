@@ -1,3 +1,4 @@
+pub mod cli;
 pub mod compile;
 pub mod corpus;
 pub mod expr;

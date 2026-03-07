@@ -15,7 +15,8 @@ It's of the same cloth as [Nutrimatic](https://nutrimatic.org) in that it is abl
 The output list is also ordered by corpus frequency, so the top of the list will be populated with more "normal" entries, with the results getting progressively more obscure as results continue. Artificially constructed phrases (like the above example) will be penalized in score compared to phrases naturally appearing in the corpus.
 
 Sajak is provided with the following front-ends:
-- A **Nushell plugin** for local use.
+- A **Nushell plugin** to leverage Nushell's built-in table functionality and provide for some additional query power.
+- A **Standard CLI** for use in other shells.
 - An **HTTP Server** for use as an API.
 
 The Nushell plugin allows sajak to take advantage of Nushell's built-in table functuality and provide for some additional query power. For example:
@@ -83,6 +84,8 @@ plugin add nu_plugin_sajak
 ```
 The Nushell plugin exposes `sajak` and `sajak-mkfst`. Run them with `-h` for usage information.
 
+### Standard CLI
+Build the `sajak` binary using Cargo. This binary works as a standalone interface for querying. If you need to make FSTs, use the Nushell inferface. Use `sajak -h` for usage information.
 
 ### HTTP Server
 Build the `sajak_http` binary using Cargo and run it. This will expose an HTTP server on the port specified in the `PORT` environment variable (1983 by default). The server suppports the following endpoints (mostly matching the options of the Nushell plugin):

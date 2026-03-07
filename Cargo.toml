@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4.13.0"
+clap = { version = "=4.5.55", features = ["derive"] }
 counter = { version = "0.6.0", features = ["serde"] }
 derive_more = "2.1.1"
 dirs = "5.0.1"
