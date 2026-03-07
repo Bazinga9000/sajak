@@ -1,4 +1,4 @@
-use dirs::data_dir;
+use crate::frontends::default_trie_path;
 use nu_plugin::{Plugin, PluginCommand};
 
 use crate::{
@@ -12,12 +12,8 @@ pub struct SajakPlugin {
 
 impl SajakPlugin {
     pub fn new() -> SajakPlugin {
-        let mut default_trie_path = data_dir().unwrap();
-        default_trie_path.push("sajak");
-        default_trie_path.push("trie.sjt");
-
         SajakPlugin {
-            trie: CorpusTrie::from_file(default_trie_path),
+            trie: CorpusTrie::from_file(default_trie_path()),
         }
     }
 }
