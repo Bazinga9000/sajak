@@ -2,6 +2,7 @@ use super::parsing::{children_offsets, read_label_and_frequency};
 use super::trie::{CorpusNode, CorpusTrie};
 use crate::fst_ops::step_fst;
 use core::f64;
+use std::sync::atomic::{AtomicBool, Ordering};
 use min_max_heap::MinMaxHeap;
 use rustfst::{
     prelude::{CoreFst, TropicalWeight, VectorFst},
@@ -18,6 +19,7 @@ impl CorpusTrie {
         &self,
         fst: VectorFst<TropicalWeight>,
         allow_loopbacks: bool,
+        terminate_flag: Option<&AtomicBool>,
         node_search_limit: u64,
         max_visible_results: usize,
     ) -> Vec<SearchResult> {
@@ -38,6 +40,10 @@ impl CorpusTrie {
             let mut seen = HashSet::new();
             let mut nodes_remaining = node_search_limit;
             while let Some(qi) = q.pop_max() {
+                match terminate_flag {
+                    Some(ptr) => if ptr.load(Ordering::Relaxed) { break; }
+                    None => {}
+                };
                 // println!("{}: tss={} pcs={} css={} ccs={}", qi.result, qi.total_search_score(), qi.prior_corpus_score, qi.current_search_score, self.corpus_score(&qi.trie_node));
                 qi.step(self, allow_loopbacks, nodes_remaining, &mut q);
 

@@ -25,7 +25,7 @@ fn main() {
 
     let search_time = Instant::now();
     let search_results = wt
-        .perform_search(fst, true, 4_000_000, 100)
+        .perform_search(fst, true, None, 4_000_000, 100)
         .into_iter()
         .map(|r| format!("{}\t{}", r.result, r.score))
         .collect::<Vec<_>>()

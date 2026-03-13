@@ -30,7 +30,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(middleware::Logger::default())
             .route("/health", web::get().to(health))
-            .route("/query", web::get().to(|i| sajak_query(&TRIE, i)))
+            .route("/query", web::get().to(|i| sajak_query(&TRIE, i, None)))
     })
     .bind(&bind_addr)?
     .workers(num_cpus::get())

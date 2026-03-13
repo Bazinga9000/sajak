@@ -72,7 +72,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let search_time = Instant::now();
     let search_results = trie
-        .perform_search(fst, enable_loopbacks, max_nodes.floor() as u64, max_results)
+        .perform_search(fst, enable_loopbacks, None, max_nodes.floor() as u64, max_results)
         .into_iter()
         .map(|r| format!("{}\t{}", r.result, r.score))
         .collect::<Vec<_>>()

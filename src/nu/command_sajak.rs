@@ -114,6 +114,7 @@ impl SimplePluginCommand for SajakCommand {
             t.perform_search(
                 fst,
                 allow_loopbacks,
+                None,
                 max_nodes.floor() as u64,
                 max_results as usize,
             )
