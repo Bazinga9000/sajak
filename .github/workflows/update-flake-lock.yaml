@@ -1,0 +1,31 @@
+name: update-flake-lock
+on:
+  workflow_dispatch: # allows manual triggering
+  schedule: # run the job at 04:00 every day
+    - cron: '0 4 */1 * *'
+jobs:
+  lockfile:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+      - name: Update flake.lock
+        uses: DeterminateSystems/update-flake-lock@main
+        id: update
+        with:
+          commit-msg: "chore(flake): bump inputs"
+          pr-title: "chore(flake): bump inputs"
+          pr-labels: |
+            dependencies
+            automated
+      - run: |
+          if [ -n "${{ steps.update.outputs.pull-request-number }}" ]; then
+            gh pr merge --auto --rebase ${{ steps.update.outputs.pull-request-number }}
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
