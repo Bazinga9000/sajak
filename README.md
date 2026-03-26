@@ -94,12 +94,12 @@ inputs.sajak = {
 And either add the desired packages from inputs:
 ```nix
 environment.systemPackages = [
-    inputs.baz9k-pkgs.packages.${pkgs.stdenv.hostPlatform.system}.sajak
+    inputs.sajak.packages.${pkgs.stdenv.hostPlatform.system}.sajak
 ]
 ```
 Or enable the provided overlay:
 ```nix
-nixpkgs.overlays = [ inputs.baz9k-pkgs.overlays.default ];
+nixpkgs.overlays = [ inputs.sajak.overlays.default ];
 environment.systemPackages = [
     sajak
 ];
