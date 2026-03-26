@@ -1,5 +1,5 @@
 {
-  description = "An overlay of miscellaneous packages.";
+  description = "Puzzlehunt tool for finding words and phrases.";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
