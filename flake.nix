@@ -14,6 +14,7 @@
     inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } (
       top@{
+        self,
         config,
         withSystem,
         moduleWithSystem,
@@ -32,14 +33,28 @@
         ];
 
         perSystem =
-          { config, pkgs, ... }:
           {
-            overlayAttrs = config.packages;
-
-            packages = {
-              sajak = pkgs.callPackage ./nix/package.nix { };
+            self',
+            config,
+            pkgs,
+            ...
+          }:
+          {
+            overlayAttrs = {
+              sajak = config.packages.default;
             };
+
+            packages.default = pkgs.callPackage ./nix/package.nix { };
           };
+
+        flake.nixosModules.default = moduleWithSystem (
+          perSystem@{ self', ... }:
+          nixos@{ ... }:
+          {
+            services.sajak-http.package = self'.packages.default;
+            imports = [ ./nix/module.nix ];
+          }
+        );
       }
     );
 }

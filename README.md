@@ -105,6 +105,19 @@ environment.systemPackages = [
 ];
 ```
 
+If you want to deploy the HTTP frontend, enable the built-in module:
+```nix
+modules = [
+  inputs.sajak.nixosModules.default
+  {
+    services.sajak-http = {
+      enable = true;
+      # port = XXXXX; #Uncomment to set a different port, defaults to 1983
+    }; 
+  }
+];
+```
+
 The Nix package for Sajak is automatically built and cached daily with [Garnix](https://garnix.io/). To avoid local builds, add the following to your nix configuration (or append to your existing `substituters` and `trusted-public-keys` if they already exist):
 ```nix
 nix.settings = {
