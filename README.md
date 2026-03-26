@@ -91,10 +91,10 @@ inputs.sajak = {
     inputs.nixpkgs.follows = "nixpkgs";
 }; 
 ```
-And either add the desired packages from inputs:
+And either add the package from inputs directly:
 ```nix
 environment.systemPackages = [
-    inputs.sajak.packages.${pkgs.stdenv.hostPlatform.system}.sajak
+    inputs.sajak.packages.${pkgs.stdenv.hostPlatform.system}.default
 ]
 ```
 Or enable the provided overlay:
