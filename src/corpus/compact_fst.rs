@@ -10,24 +10,19 @@ use rustfst::{
 // '\0', '0'-'9', 'a'-'z', ' '.
 const ALPHABET_SIZE: usize = 38;
 
-fn char_to_pos(c: char) -> usize {
+fn char_to_pos(c: char) -> Option<usize> {
     match c {
-        '\0' => 0,
-        '0'..='9' => 1 + (c as u8 - b'0') as usize,
-        'a'..='z' => 11 + (c as u8 - b'a') as usize,
-        ' ' => 37,
-        _ => usize::MAX,
+        '\0' => Some(0),
+        '0'..='9' => Some(1 + (c as u8 - b'0') as usize),
+        'a'..='z' => Some(11 + (c as u8 - b'a') as usize),
+        ' ' => Some(37),
+        _ => None,
     }
 }
 
 fn label_to_pos(label: u32) -> Option<usize> {
     let c = char::from_u32(label)?;
-    let pos = char_to_pos(c);
-    if pos < ALPHABET_SIZE {
-        Some(pos)
-    } else {
-        None
-    }
+    char_to_pos(c)
 }
 
 #[derive(Clone)]
@@ -66,11 +61,9 @@ impl CompactFst {
     }
 
     pub fn step(&self, cur_state: StateId, label: char) -> Option<(StateId, char)> {
-        let pos = char_to_pos(label);
-        if pos < ALPHABET_SIZE {
-            self.tables[cur_state as usize][pos]
-        } else {
-            None
+        match char_to_pos(label) {
+            Some(pos) => self.tables[cur_state as usize][pos],
+            None => None,
         }
     }
 
