@@ -1,6 +1,6 @@
+use super::compact_fst::CompactFst;
 use super::parsing::{children_offsets, read_label_and_frequency};
 use super::trie::{CorpusNode, CorpusTrie};
-use crate::fst_ops::step_fst;
 use core::f64;
 use min_max_heap::MinMaxHeap;
 use rustfst::{
@@ -21,54 +21,50 @@ impl CorpusTrie {
         node_search_limit: u64,
         max_visible_results: usize,
     ) -> Vec<SearchResult> {
-        if let Some(start_state) = fst.start() {
-            let root = self.root();
-
-            let mut q = MinMaxHeap::with_capacity(node_search_limit as usize + 10);
-            q.push(QueueItem {
-                result: "".to_owned(),
-                prior_corpus_score: 0.0,
-                current_search_score: 0.0,
-                fst: Arc::new(fst),
-                fst_state: start_state,
-                trie_node: root,
-            });
-
-            let mut res_q = BinaryHeap::new();
-            let mut seen = HashSet::new();
-            let mut nodes_remaining = node_search_limit;
-            while let Some(qi) = q.pop_max() {
-                // println!("{}: tss={} pcs={} css={} ccs={}", qi.result, qi.total_search_score(), qi.prior_corpus_score, qi.current_search_score, self.corpus_score(&qi.trie_node));
-                qi.step(self, allow_loopbacks, nodes_remaining, &mut q);
-
-                if qi.is_accepted() // FST is on a final state
-                && qi.is_in_corpus() // state is terminal
-                // && !qi.result.ends_with(" ") // does not end with a space (no root)
-                && !seen.contains(&qi.result)
-                {
-                    // not previously seen
-                    seen.insert(qi.result.clone());
-                    res_q.push(SearchResult::from_queueitem(qi, self))
-                }
-
-                nodes_remaining -= 1;
-                if nodes_remaining == 0 {
-                    break;
-                }
-            }
-
-            let mut results = vec![];
-            while let Some(res) = res_q.pop() {
-                if results.len() >= max_visible_results {
-                    break;
-                }
-                results.push(res);
-            }
-
-            results
-        } else {
-            vec![]
+        if fst.start().is_none() {
+            return vec![];
         }
+        let compact = Arc::new(CompactFst::from_fst(&fst));
+        drop(fst);
+
+        let root = self.root();
+
+        let mut q = MinMaxHeap::with_capacity(node_search_limit as usize + 10);
+        q.push(QueueItem {
+            result: "".to_owned(),
+            prior_corpus_score: 0.0,
+            current_search_score: 0.0,
+            fst: compact.clone(),
+            fst_state: compact.start,
+            trie_node: root,
+        });
+
+        let mut res_q = BinaryHeap::new();
+        let mut seen = HashSet::new();
+        let mut nodes_remaining = node_search_limit;
+        while let Some(qi) = q.pop_max() {
+            qi.step(self, allow_loopbacks, nodes_remaining, &mut q);
+
+            if qi.is_accepted() && qi.is_in_corpus() && !seen.contains(&qi.result) {
+                seen.insert(qi.result.clone());
+                res_q.push(SearchResult::from_queueitem(qi, self))
+            }
+
+            nodes_remaining -= 1;
+            if nodes_remaining == 0 {
+                break;
+            }
+        }
+
+        let mut results = vec![];
+        while let Some(res) = res_q.pop() {
+            if results.len() >= max_visible_results {
+                break;
+            }
+            results.push(res);
+        }
+
+        results
     }
 }
 
@@ -77,7 +73,7 @@ struct QueueItem {
     prior_corpus_score: f64,
     current_search_score: f64,
 
-    fst: Arc<VectorFst<TropicalWeight>>,
+    fst: Arc<CompactFst>,
     fst_state: StateId,
     trie_node: CorpusNode,
 }
@@ -88,7 +84,7 @@ impl QueueItem {
     }
 
     fn is_accepted(&self) -> bool {
-        self.fst.is_final(self.fst_state).unwrap()
+        self.fst.is_final(self.fst_state)
     }
 
     fn step(
@@ -112,7 +108,7 @@ impl QueueItem {
                 .map(|n| (*n, read_label_and_frequency(*n, &trie.blob).unwrap().1))
             {
                 let label = labelbyte.label;
-                if let Some((next_state, _)) = step_fst(self.fst.as_ref(), self.fst_state, label) {
+                if let Some((next_state, _)) = self.fst.step(self.fst_state, label) {
                     let search_score = (frequency as f64).log10() - trie.root_frequency_log;
                     if self.prior_corpus_score + search_score < cutoff_score {
                         break; // all following nodes are worse
@@ -140,7 +136,7 @@ impl QueueItem {
         }
 
         if allow_loopbacks && self.is_in_corpus() {
-            if let Some((next_state, _)) = step_fst(&self.fst, self.fst_state, ' ') {
+            if let Some((next_state, _)) = self.fst.step(self.fst_state, ' ') {
                 let search_score = self.prior_corpus_score + trie.corpus_score(&self.trie_node);
                 if search_score >= cutoff_score {
                     let mut new_result = self.result.clone();
