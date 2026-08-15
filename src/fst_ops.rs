@@ -13,6 +13,11 @@ pub fn optimize_fst(fst: &mut VectorFst<TropicalWeight>) {
     tr_sort(fst, OLabelCompare {}); // needed to allow composing (for acceptors, read "intersecting") two FSTS
 }
 
+// Sort transitions without full optimization (needed before compose)
+pub fn sort_fst(fst: &mut VectorFst<TropicalWeight>) {
+    tr_sort(fst, OLabelCompare {});
+}
+
 // Add a transition from every state to itself taking ' '
 pub fn ignore_spaces(fst: &mut VectorFst<TropicalWeight>) {
     for s in fst.states_iter() {
@@ -59,6 +64,9 @@ pub fn concat_many(fst_vec: Vec<VectorFst<TropicalWeight>>) -> VectorFst<Tropica
 
 // Unions a vector of FSTs
 pub fn union_many(fst_vec: Vec<VectorFst<TropicalWeight>>) -> VectorFst<TropicalWeight> {
+    if fst_vec.is_empty() {
+        return matches_empty();
+    }
     let mut fsts = fst_vec.into_iter().collect::<VecDeque<_>>();
     while fsts.len() > 1 {
         let mut first = fsts.pop_front().unwrap();
@@ -72,6 +80,9 @@ pub fn union_many(fst_vec: Vec<VectorFst<TropicalWeight>>) -> VectorFst<Tropical
 
 // Intersects a vector of FSTs
 pub fn intersect_many(fst_vec: Vec<VectorFst<TropicalWeight>>) -> VectorFst<TropicalWeight> {
+    if fst_vec.is_empty() {
+        return matches_empty();
+    }
     let mut fsts = fst_vec.into_iter().collect::<VecDeque<_>>();
     while fsts.len() > 1 {
         let first = fsts.pop_front().unwrap();
@@ -102,8 +113,10 @@ pub fn optionalize(fst: &mut VectorFst<TropicalWeight>) {
 // deserialize some bytes into an FST, and optionally ignore spaces
 pub fn fetch_and_ignore(fst_bytes: &[u8], ignore: bool) -> VectorFst<TropicalWeight> {
     let mut fst = VectorFst::load(fst_bytes).unwrap();
+    sort_fst(&mut fst);
     if ignore {
         ignore_spaces(&mut fst);
+        sort_fst(&mut fst);
     }
     fst
 }
