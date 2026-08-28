@@ -1,0 +1,16 @@
+# Hook into nix-ci.yaml
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nix:
+    uses: ./.github/workflows/nix-ci.yaml

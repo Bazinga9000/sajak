@@ -1,8 +1,8 @@
 name: update-flake-lock
 on:
   workflow_dispatch: # allows manual triggering
-  schedule: # run the job at 04:00 every day
-    - cron: '0 4 */1 * *'
+  schedule: # check for flake input updates every 2 hours
+    - cron: '0 */2 * * *'
 jobs:
   lockfile:
     permissions:
