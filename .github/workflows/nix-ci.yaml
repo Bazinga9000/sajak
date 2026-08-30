@@ -67,3 +67,17 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Build ${{ matrix.package }}
         run: nix build ".#packages.${{ needs.discover.outputs.system }}.${{ matrix.package }}"
+  passed:
+    name: Nix CI passed
+    if: ${{ always() }}
+    needs:
+      - discover
+      - build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        run: |
+          if [[ "${{ needs.discover.result }}" != "success" ||
+                "${{ needs.build.result }}" != "success" ]]; then
+            exit 1
+          fi
