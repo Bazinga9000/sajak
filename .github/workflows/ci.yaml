@@ -1,4 +1,3 @@
-# Hook into nix-ci.yaml
 name: ci
 
 on:
@@ -7,10 +6,14 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   nix:
-    uses: ./.github/workflows/nix-ci.yaml
+    uses: Bazinga9000/chashmal/.github/workflows/nix-ci.yaml@main

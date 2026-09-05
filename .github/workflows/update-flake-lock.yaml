@@ -3,29 +3,13 @@ on:
   workflow_dispatch: # allows manual triggering
   schedule: # check for flake input updates every 2 hours
     - cron: '0 */2 * * *'
+permissions:
+  contents: write
+  pull-requests: write
 jobs:
   lockfile:
-    permissions:
-      contents: write
-      pull-requests: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-      - name: Update flake.lock
-        uses: DeterminateSystems/update-flake-lock@main
-        id: update
-        with:
-          commit-msg: "chore(flake): bump inputs"
-          pr-title: "chore(flake): bump inputs"
-          pr-labels: |
-            dependencies
-            automated
-      - run: |
-          if [ -n "${{ steps.update.outputs.pull-request-number }}" ]; then
-            gh pr merge --auto --rebase ${{ steps.update.outputs.pull-request-number }}
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
+    uses: Bazinga9000/chashmal/.github/workflows/update-flake-lock.yaml@main
+    with:
+      app-client-id: ${{ vars.APP_CLIENT_ID }}
+    secrets:
+      app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
