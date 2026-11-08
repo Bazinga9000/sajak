@@ -4,6 +4,7 @@
   fetchFromGitHub,
   fetchurl,
   pkg-config,
+  zstd,
   udev,
   vulkan-loader,
   libX11,
@@ -31,7 +32,18 @@ rustPlatform.buildRustPackage rec {
 
   nativeBuildInputs = [
     makeBinaryWrapper
+    pkg-config
   ];
+
+  buildInputs = [
+    zstd
+  ];
+
+  # nixpkgs' cargo-setup-hook sets this for all Rust builds, making zstd-sys
+  # link the system libzstd via pkg-config instead of compiling its vendored
+  # copy. Set it explicitly so the build behaves the same on nixpkgs revisions
+  # without that hook.
+  env.ZSTD_SYS_USE_PKG_CONFIG = true;
 
   corpus = fetchurl {
     url = "https://github.com/Bazinga9000/sajak/releases/download/corpus-${corpusVersion}/trie.sjt";
